@@ -1,6 +1,6 @@
-use std::ops::RemAssign;
+use std::fmt::format;
 
-use postgres::{binary_copy, Client, Error, NoTls};
+use postgres::{Client, Error, NoTls};
 
 use super::contact::Contact;
 
@@ -36,5 +36,16 @@ pub fn insert_new_contact_into_database(
     client.execute(
         "INSERT INTO contacts (name, birthday, phone, email, notes) VALUES ($1, $2, $3, $4, $5)",
         &[&name, &birthday, &phone, &email, &notes],
+    )
+}
+
+pub fn select_contacts_from_database(
+    client: &mut Client,
+    name: String,
+) -> Result<Vec<postgres::Row>, Error> {
+    let name = format!("{}%", name);
+    client.query(
+        "SELECT * FROM contacts WHERE LOWER(name) LIKE LOWER($1) ORDER BY name",
+        &[&name],
     )
 }

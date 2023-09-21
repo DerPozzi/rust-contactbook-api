@@ -1,5 +1,5 @@
 use dotenv::dotenv;
-use modules::database::insert_new_contact_into_database;
+use modules::database::{insert_new_contact_into_database, select_contacts_from_database};
 use postgres::Error;
 use std::{env, time::Duration};
 
@@ -31,10 +31,19 @@ fn main() -> Result<(), Error> {
             notes: None,
         },
     )?;
+    insert_new_contact_into_database(
+        &mut client,
+        Contact {
+            name: "Emily".to_owned(),
+            id: None,
+            birthday: Some("05.09.2003".to_owned()),
+            phone: Some("017641121785".to_owned()),
+            email: None,
+            notes: Some("doofe nuss".to_owned()),
+        },
+    )?;
 
-    let test = client.query("SELECT * FROM contacts WHERE name=$1", &[&"Gianluca"])?;
-
-    for row in test {
+    for row in select_contacts_from_database(&mut client, "emily".to_owned())? {
         let contact = Contact {
             id: row.get(0),
             name: row.get(1),
