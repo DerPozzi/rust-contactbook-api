@@ -25,8 +25,8 @@ fn main() -> Result<(), Error> {
         Contact {
             name: "Gianluca".to_owned(),
             id: None,
-            birthday: Some("05.09.2003".to_owned()),
-            phone: Some("017641121785".to_owned()),
+            birthday: Some("99.99.9999".to_owned()),
+            phone: Some("123456789".to_owned()),
             email: None,
             notes: None,
         },
@@ -36,8 +36,8 @@ fn main() -> Result<(), Error> {
         Contact {
             name: "Emily".to_owned(),
             id: None,
-            birthday: Some("05.09.2003".to_owned()),
-            phone: Some("017641121785".to_owned()),
+            birthday: Some("99.99.9999".to_owned()),
+            phone: Some("0123456789".to_owned()),
             email: None,
             notes: Some("doofe nuss".to_owned()),
         },
