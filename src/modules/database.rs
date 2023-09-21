@@ -2,7 +2,7 @@ use postgres::{Client, Error, NoTls};
 
 use super::contact::Contact;
 
-pub fn connect_to_database(url: &String) -> Result<Client, Error> {
+pub async fn connect_to_database(url: &str) -> Result<Client, Error> {
     let client = Client::connect(url, NoTls)?;
     Ok(client)
 }
@@ -57,7 +57,7 @@ pub fn select_contacts_by_name_from_database(
 }
 
 pub fn select_contact_by_id(client: &mut Client, id: i32) -> Result<Contact, Error> {
-    let row = client.query_one("SLECT DISTINCT * FROM contacts WHERE id=$1", &[&id])?;
+    let row = client.query_one("SELECT DISTINCT * FROM contacts WHERE id=$1", &[&id])?;
     Ok(Contact {
         id: row.get(0),
         name: row.get(1),
@@ -82,7 +82,7 @@ pub fn edit_contact_by_id(client: &mut Client, contact: Contact) -> Result<u64, 
     let email = contact.email.unwrap_or_default();
     let notes = contact.notes.unwrap_or_default();
 
-    client.execute("UPDATE contacts SET name=$1, last_name=$2, birthday=$3, phone=$4, email=$5, notes=$6 WHERE id=$6", &[&name, &last_name, &birthday, &phone, &email, &notes, &id])
+    client.execute("UPDATE contacts SET name=$1, last_name=$2, birthday=$3, phone=$4, email=$5, notes=$6 WHERE id=$7", &[&name, &last_name, &birthday, &phone, &email, &notes, &id])
 }
 
 pub fn delete_contact_by_id(client: &mut Client, id: i32) -> Result<Vec<postgres::Row>, Error> {

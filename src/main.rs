@@ -1,21 +1,25 @@
 use dotenv::dotenv;
-use modules::database::{
-    insert_new_contact_into_database, select_all_contacts_from_database,
-    select_contacts_by_name_from_database,
-};
-use postgres::Error;
-use std::{env, time::Duration};
+use postgres::{Client, Error};
+use std::{env, net::SocketAddr, time::Duration};
+use tokio::task;
 
 mod modules;
 
 use crate::modules::contact::Contact;
-use crate::modules::database::{self, delete_contact_by_id};
+use modules::{
+    api::run_server,
+    database::{
+        self, connect_to_database, delete_contact_by_id, insert_new_contact_into_database,
+        select_all_contacts_from_database, select_contacts_by_name_from_database,
+    },
+};
 
-fn main() -> Result<(), Error> {
+#[tokio::main]
+async fn main() -> Result<(), Error> {
     dotenv().ok();
     let db_url = env::var("DATABASE_URL").expect("ERROR: Expected \"DB_URL\"");
 
-    let mut client = database::connect_to_database(&db_url)?;
+    let mut client = connect_to_database(db_url.as_str()).await?;
 
     if client.is_valid(Duration::new(5, 0)).is_ok() {
         println!("Connection to DB successfull!")
@@ -23,48 +27,12 @@ fn main() -> Result<(), Error> {
 
     database::create_table(&mut client)?;
 
-    insert_new_contact_into_database(
-        &mut client,
-        Contact {
-            id: None,
-            name: "Gianluca".to_owned(),
-            last_name: Some("Pozzo".to_owned()),
-            birthday: Some("99.99.9999".to_owned()),
-            phone: Some("123456789".to_owned()),
-            email: None,
-            notes: None,
-        },
-    )?;
-    insert_new_contact_into_database(
-        &mut client,
-        Contact {
-            id: None,
-            name: "Emily".to_owned(),
-            last_name: None,
-            birthday: Some("99.99.9999".to_owned()),
-            phone: Some("0123456789".to_owned()),
-            email: None,
-            notes: Some("doofe nuss".to_owned()),
-        },
-    )?;
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    tokio::spawn(async move {
+        run_server(addr).await;
+    });
 
-    for contact in select_contacts_by_name_from_database(&mut client, "poz".to_owned())? {
-        println!("{:?}", contact);
-        println!();
-    }
-
-    println!();
-
-    delete_contact_by_id(&mut client, 1)?;
-
-    for row in select_all_contacts_from_database(&mut client)? {
-        println!("{:?}", row);
-        println!();
-    }
-
-    client.execute("DROP TABLE contacts", &[])?;
-
-    client.close()?;
+    // client.close()?;
 
     Ok(())
 }
