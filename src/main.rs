@@ -1,7 +1,7 @@
 use dotenv::dotenv;
 use modules::database::{
     insert_new_contact_into_database, select_all_contacts_from_database,
-    select_contacts_from_database,
+    select_contacts_by_name_from_database,
 };
 use postgres::Error;
 use std::{env, time::Duration};
@@ -26,8 +26,9 @@ fn main() -> Result<(), Error> {
     insert_new_contact_into_database(
         &mut client,
         Contact {
-            name: "Gianluca".to_owned(),
             id: None,
+            name: "Gianluca".to_owned(),
+            last_name: Some("Pozzo".to_owned()),
             birthday: Some("99.99.9999".to_owned()),
             phone: Some("123456789".to_owned()),
             email: None,
@@ -37,8 +38,9 @@ fn main() -> Result<(), Error> {
     insert_new_contact_into_database(
         &mut client,
         Contact {
-            name: "Emily".to_owned(),
             id: None,
+            name: "Emily".to_owned(),
+            last_name: None,
             birthday: Some("99.99.9999".to_owned()),
             phone: Some("0123456789".to_owned()),
             email: None,
@@ -46,15 +48,7 @@ fn main() -> Result<(), Error> {
         },
     )?;
 
-    for row in select_contacts_from_database(&mut client, "emily".to_owned())? {
-        let contact = Contact {
-            id: row.get(0),
-            name: row.get(1),
-            birthday: row.try_get(2).ok(),
-            phone: row.try_get(3).ok(),
-            email: row.try_get(4).ok(),
-            notes: row.try_get(5).ok(),
-        };
+    for contact in select_contacts_by_name_from_database(&mut client, "poz".to_owned())? {
         println!("{:?}", contact);
         println!();
     }
