@@ -1,40 +1,38 @@
 use dotenv::dotenv;
-use postgres::{Client, Error, NoTls};
+use modules::database::insert_new_contact_into_database;
+use postgres::Error;
 use std::{env, time::Duration};
 
 mod modules;
 
 use crate::modules::contact::Contact;
+use crate::modules::database;
 
 fn main() -> Result<(), Error> {
     dotenv().ok();
     let db_url = env::var("DATABASE_URL").expect("ERROR: Expected \"DB_URL\"");
 
-    let mut client = connect_to_database(&db_url)?;
+    let mut client = database::connect_to_database(&db_url)?;
 
     if client.is_valid(Duration::new(5, 0)).is_ok() {
         println!("Connection to DB successfull!")
     }
 
-    client.batch_execute(
-        "
-        CREATE TABLE IF NOT EXISTS contacts (
-            id              SERIAL PRIMARY KEY,
-            name            VARCHAR NOT NULL,
-            birthday         VARCHAR,
-            phone           VARCHAR,
-            email           VARCHAR,
-            notes           VARCHAR
-            )
-    ",
+    database::create_table(&mut client)?;
+
+    insert_new_contact_into_database(
+        &mut client,
+        Contact {
+            name: "Gianluca".to_owned(),
+            id: None,
+            birthday: Some("05.09.2003".to_owned()),
+            phone: Some("017641121785".to_owned()),
+            email: None,
+            notes: None,
+        },
     )?;
 
-    client.execute(
-        "INSERT INTO contacts (name, birthday) VALUES ($1, $2)",
-        &[&"Gianluca", &"05.09.2003"],
-    )?;
-
-    let test = client.query("SELECT * FROM contacts", &[])?;
+    let test = client.query("SELECT * FROM contacts WHERE name=$1", &[&"Gianluca"])?;
 
     for row in test {
         let contact = Contact {
@@ -51,9 +49,4 @@ fn main() -> Result<(), Error> {
     client.execute("DROP TABLE contacts", &[])?;
 
     Ok(())
-}
-
-fn connect_to_database(url: &String) -> Result<Client, Error> {
-    let client = Client::connect(url, NoTls)?;
-    Ok(client)
 }
