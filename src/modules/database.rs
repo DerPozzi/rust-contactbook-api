@@ -84,3 +84,7 @@ pub fn edit_contact_by_id(client: &mut Client, contact: Contact) -> Result<u64, 
 
     client.execute("UPDATE contacts SET name=$1, last_name=$2, birthday=$3, phone=$4, email=$5, notes=$6 WHERE id=$6", &[&name, &last_name, &birthday, &phone, &email, &notes, &id])
 }
+
+pub fn delete_contact_by_id(client: &mut Client, id: i32) -> Result<Vec<postgres::Row>, Error> {
+    client.query("DELETE FROM contacts WHERE id=$1", &[&id])
+}

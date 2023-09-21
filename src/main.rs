@@ -9,7 +9,7 @@ use std::{env, time::Duration};
 mod modules;
 
 use crate::modules::contact::Contact;
-use crate::modules::database;
+use crate::modules::database::{self, delete_contact_by_id};
 
 fn main() -> Result<(), Error> {
     dotenv().ok();
@@ -55,12 +55,16 @@ fn main() -> Result<(), Error> {
 
     println!();
 
+    delete_contact_by_id(&mut client, 1)?;
+
     for row in select_all_contacts_from_database(&mut client)? {
         println!("{:?}", row);
         println!();
     }
 
     client.execute("DROP TABLE contacts", &[])?;
+
+    client.close()?;
 
     Ok(())
 }
