@@ -1,1 +1,1 @@
-mod contact;
+pub mod contact;
