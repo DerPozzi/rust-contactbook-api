@@ -1,5 +1,8 @@
 use dotenv::dotenv;
-use modules::database::{insert_new_contact_into_database, select_contacts_from_database};
+use modules::database::{
+    insert_new_contact_into_database, select_all_contacts_from_database,
+    select_contacts_from_database,
+};
 use postgres::Error;
 use std::{env, time::Duration};
 
@@ -52,7 +55,15 @@ fn main() -> Result<(), Error> {
             email: row.try_get(4).ok(),
             notes: row.try_get(5).ok(),
         };
-        println!("Hello {:?}", contact);
+        println!("{:?}", contact);
+        println!();
+    }
+
+    println!();
+
+    for row in select_all_contacts_from_database(&mut client)? {
+        println!("{:?}", row);
+        println!();
     }
 
     client.execute("DROP TABLE contacts", &[])?;

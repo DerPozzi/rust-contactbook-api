@@ -49,3 +49,7 @@ pub fn select_contacts_from_database(
         &[&name],
     )
 }
+
+pub fn select_all_contacts_from_database(client: &mut Client) -> Result<Vec<postgres::Row>, Error> {
+    client.query("SELECT * FROM contacts", &[])
+}
