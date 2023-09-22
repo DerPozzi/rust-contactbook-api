@@ -15,7 +15,6 @@ use std::sync::Arc;
 use std::{env, net::SocketAddr, time::Duration};
 
 use tokio::sync::Mutex;
-use tower::ServiceBuilder;
 
 mod modules;
 
