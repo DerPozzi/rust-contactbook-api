@@ -1,10 +1,13 @@
 use anyhow::Error;
-use axum::extract::State;
-use axum::routing::get;
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum::routing::{get, post};
 use axum::Router;
-use axum::{http::StatusCode, Json};
+use axum::{extract, Json};
 use dotenv::dotenv;
-use modules::database::{self, Database};
+use modules::contact;
+use modules::database::Database;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use sqlx::{Pool, Postgres};
 use std::sync::Arc;
@@ -13,7 +16,6 @@ use std::{env, net::SocketAddr, time::Duration};
 mod modules;
 
 use crate::modules::contact::Contact;
-use modules::api::{self, run_server};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -33,7 +35,10 @@ async fn main() -> Result<(), Error> {
 
     let app = axum::Router::new()
         .route("/", get(index))
-        .route("/contacts/all", get(contacts))
+        .route("/api/contacts", get(contacts))
+        .route("/api/contacts/id/:id", get(contact_by_id))
+        .route("/api/contacts/name/:id", get(contact_by_name))
+        .route("/api/contacts/new", post(new_contact))
         .with_state(shared_state);
 
     axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
@@ -47,28 +52,42 @@ async fn index() -> String {
     String::from("Hello World")
 }
 
-async fn contacts(State(database): State<Arc<Database>>) -> Json<Vec<Contact>> {
-    let contacts = database
-        .select_all_contacts_from_database()
-        .await
-        .expect("ERROR: Couldnt query all contacts");
-    Json(contacts)
+async fn contacts(State(database): State<Arc<Database>>) -> impl IntoResponse {
+    match database.select_all_contacts_from_database().await {
+        Ok(contacts) => Json(contacts).into_response(),
+        Err(msg) => (StatusCode::NO_CONTENT, format!("ERROR: {}", msg)).into_response(),
+    }
 }
 
-async fn new_contact(State(database): State<Arc<Database>>) {
-    match database
-        .insert_new_contact_into_database(Contact {
-            id: None,
-            name: "Gianluca".to_owned(),
-            last_name: Some("Pozzo".to_owned()),
-            birthday: None,
-            phone: None,
-            email: None,
-            notes: None,
-        })
-        .await
-    {
-        Ok(_) => {}
-        Err(msg) => println!("ERROR: {}", msg),
+async fn new_contact(
+    extract::Json(payload): extract::Json<Contact>, // State(database): State<Arc<Database>>,
+) {
+}
+
+async fn contact_by_id(
+    State(database): State<Arc<Database>>,
+    Path(id): Path<i64>,
+) -> impl IntoResponse {
+    match database.select_contact_by_id(id).await {
+        Ok(contact) => {
+            return Json(contact).into_response();
+        }
+        Err(msg) => {
+            return (StatusCode::BAD_REQUEST, format!("ERROR: {}", msg)).into_response();
+        }
+    }
+}
+
+async fn contact_by_name(
+    State(database): State<Arc<Database>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    match database.select_contact_by_name(id).await {
+        Ok(contact) => {
+            return Json(contact).into_response();
+        }
+        Err(msg) => {
+            return (StatusCode::BAD_REQUEST, format!("ERROR: {}", msg)).into_response();
+        }
     }
 }

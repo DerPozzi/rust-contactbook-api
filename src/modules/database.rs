@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Error;
 use sqlx::{pool::PoolConnection, Pool, Postgres};
 
-use super::contact::Contact;
+use super::contact::{self, Contact};
 
 pub struct Database {
     _pool: Pool<Postgres>,
@@ -39,6 +39,23 @@ impl Database {
             }
         }
     }
+    pub async fn select_contact_by_id(&self, id: i64) -> Result<Contact, Error> {
+        let contact = sqlx::query_as::<_, Contact>("SELECT * FROM contacts WHERE id=$1")
+            .bind(id)
+            .fetch_one(&self._pool)
+            .await?;
+        Ok(contact)
+    }
+
+    pub async fn select_contact_by_name(&self, id: String) -> Result<Contact, Error> {
+        let contact = sqlx::query_as::<_, Contact>(
+            "SELECT * FROM contacts WHERE LOWER(name) LIKE LOWER($1) ORDER BY name",
+        )
+        .bind(id)
+        .fetch_one(&self._pool)
+        .await?;
+        Ok(contact)
+    }
 
     pub async fn insert_new_contact_into_database(&self, contact: Contact) -> Result<(), Error> {
         let name = contact.name;
@@ -60,7 +77,7 @@ impl Database {
     }
 
     pub async fn select_all_contacts_from_database(&self) -> Result<Vec<Contact>, Error> {
-        let contacts = sqlx::query_as::<_, Contact>("SELECT * FROM contacts")
+        let contacts = sqlx::query_as::<_, Contact>("SELECT * FROM contacts ORDER BY name")
             .fetch_all(&self._pool)
             .await?;
         Ok(contacts)
