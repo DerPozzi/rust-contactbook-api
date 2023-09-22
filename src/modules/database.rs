@@ -1,9 +1,7 @@
-use std::sync::Arc;
-
 use anyhow::Error;
-use sqlx::{pool::PoolConnection, Pool, Postgres};
+use sqlx::{Pool, Postgres};
 
-use super::contact::{self, Contact};
+use super::contact::Contact;
 
 pub struct Database {
     _pool: Pool<Postgres>,

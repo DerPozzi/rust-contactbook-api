@@ -1,24 +1,18 @@
 use anyhow::Error;
-use axum::extract::{Extension, Path, State};
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::routing::{delete, get, post};
-use axum::Router;
+use axum::routing::{get, post};
 use axum::{extract, Json};
 use dotenv::dotenv;
-use modules::contact;
-use modules::database::Database;
-use sqlx::{postgres::PgPoolOptions, PgPool};
-use sqlx::{Pool, Postgres};
-use std::ops::Deref;
+use sqlx::postgres::PgPoolOptions;
+use std::env;
 use std::sync::Arc;
-use std::{env, net::SocketAddr, time::Duration};
-
-use tokio::sync::Mutex;
 
 mod modules;
 
 use crate::modules::contact::Contact;
+use modules::database::Database;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -75,10 +69,8 @@ async fn new_contact(
     extract::Json(payload): extract::Json<Contact>,
     database: Arc<Database>,
 ) -> impl IntoResponse {
-    // Füge den neuen Kontakt zur Datenbank hinzu
     let result = database.insert_new_contact_into_database(payload).await;
 
-    // Überprüfe, ob das Einfügen erfolgreich war
     match result {
         Ok(_) => StatusCode::CREATED.into_response(), // Wenn erfolgreich, gebe den Status "Created" zurück
         Err(msg) => (StatusCode::INTERNAL_SERVER_ERROR, format!("ERROR: {}", msg)).into_response(), // Wenn ein Fehler auftritt, gebe den Status "Internal Server Error" zurück
