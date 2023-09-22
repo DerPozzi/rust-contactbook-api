@@ -14,10 +14,6 @@ impl Database {
         Database { _pool: pool }
     }
 
-    pub async fn close_connection(&self) {
-        self._pool.close().await;
-    }
-
     pub async fn create_table(&self) {
         if !self._pool.is_closed() {
             match sqlx::query(
