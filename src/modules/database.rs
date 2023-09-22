@@ -1,44 +1,72 @@
-use postgres::{Client, Error, NoTls};
+use std::sync::Arc;
+
+use anyhow::Error;
+use sqlx::{pool::PoolConnection, Pool, Postgres};
 
 use super::contact::Contact;
 
-pub async fn connect_to_database(url: &str) -> Result<Client, Error> {
-    let client = Client::connect(url, NoTls)?;
-    Ok(client)
+pub struct Database {
+    _pool: Pool<Postgres>,
 }
 
-pub fn create_table(client: &mut Client) -> Result<(), Error> {
-    client.batch_execute(
-        "
-        CREATE TABLE IF NOT EXISTS contacts (
-            id              SERIAL PRIMARY KEY,
-            name            VARCHAR NOT NULL,
-            last_name       VARCHAR,
-            birthday         VARCHAR,
-            phone           VARCHAR,
-            email           VARCHAR,
-            notes           VARCHAR
+impl Database {
+    pub fn new(pool: Pool<Postgres>) -> Self {
+        Database { _pool: pool }
+    }
+
+    pub async fn close_connection(&self) {
+        self._pool.close().await;
+    }
+
+    pub async fn create_table(&self) {
+        if !self._pool.is_closed() {
+            match sqlx::query(
+                "CREATE TABLE IF NOT EXISTS contacts (
+                id              SERIAL PRIMARY KEY,
+                name            VARCHAR NOT NULL,
+                last_name       VARCHAR,
+                birthday         VARCHAR,
+                phone           VARCHAR,
+                email           VARCHAR,
+                notes           VARCHAR
+                )",
             )
-    ",
-    )
-}
+            .fetch_all(&self._pool)
+            .await
+            {
+                Ok(_) => return,
+                Err(msg) => println!("ERROR: {}", msg),
+            }
+        }
+    }
 
-pub fn insert_new_contact_into_database(
-    client: &mut Client,
-    contact: Contact,
-) -> Result<u64, Error> {
-    let name = contact.name;
-    let last_name = contact.last_name.unwrap_or_default();
-    let birthday = contact.birthday.unwrap_or_default();
-    let phone = contact.phone.unwrap_or_default();
-    let email = contact.email.unwrap_or_default();
-    let notes = contact.notes.unwrap_or_default();
-    client.execute(
-        "INSERT INTO contacts (name, last_name, birthday, phone, email, notes) VALUES ($1, $2, $3, $4, $5, $6)",
-        &[&name, &last_name, &birthday, &phone, &email, &notes],
-    )
-}
+    pub async fn insert_new_contact_into_database(&self, contact: Contact) -> Result<(), Error> {
+        let name = contact.name;
+        let last_name = contact.last_name.unwrap_or_default();
+        let birthday = contact.birthday.unwrap_or_default();
+        let phone = contact.phone.unwrap_or_default();
+        let email = contact.email.unwrap_or_default();
+        let notes = contact.notes.unwrap_or_default();
+        let _:(i64,) = sqlx::query_as("INSERT INTO contacts (name, last_name, birthday, phone, email, notes) VALUES ($1, $2, $3, $4, $5, $6)")
+            .bind(&name)
+            .bind(&last_name)
+            .bind(birthday)
+            .bind(phone)
+            .bind(email)
+            .bind(notes)
+            .fetch_one(&self._pool)
+            .await?;
+        Ok(())
+    }
 
+    pub async fn select_all_contacts_from_database(&self) -> Result<Vec<Contact>, Error> {
+        let contacts = sqlx::query_as::<_, Contact>("SELECT * FROM contacts")
+            .fetch_all(&self._pool)
+            .await?;
+        Ok(contacts)
+    }
+}
+/*
 pub fn select_contacts_by_name_from_database(
     client: &mut Client,
     name: String,
@@ -69,8 +97,11 @@ pub fn select_contact_by_id(client: &mut Client, id: i32) -> Result<Contact, Err
     })
 }
 
-pub fn select_all_contacts_from_database(client: &mut Client) -> Result<Vec<postgres::Row>, Error> {
-    client.query("SELECT * FROM contacts", &[])
+pub async fn select_all_contacts_from_database(pool: PoolConnection<Postgres>) {
+    let contacts = sqlx::query_as::<_, Contact>("SELECT * FROM contacts")
+        .fetch_all(&pool)
+        .await
+        .unwrap();
 }
 
 pub fn edit_contact_by_id(client: &mut Client, contact: Contact) -> Result<u64, Error> {
@@ -88,3 +119,4 @@ pub fn edit_contact_by_id(client: &mut Client, contact: Contact) -> Result<u64, 
 pub fn delete_contact_by_id(client: &mut Client, id: i32) -> Result<Vec<postgres::Row>, Error> {
     client.query("DELETE FROM contacts WHERE id=$1", &[&id])
 }
+*/

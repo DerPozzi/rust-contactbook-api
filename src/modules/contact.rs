@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Serialize, Deserialize)]
+use sqlx::FromRow;
+#[derive(FromRow, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Contact {
     pub id: Option<i32>,
